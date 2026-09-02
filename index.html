@@ -1,14 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+    <!-- Metadados básicos: codificação, responsividade, descrição e título da aba. -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Estúdio 3D interativo com Three.js para criar e exportar imagens.">
     <title>XYZ Studio — Editor 3D</title>
+    <!-- Fontes externas usadas na interface do editor (não afetam a geometria 3D). -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ================================================================
+           1. TOKENS VISUAIS
+           Variáveis centralizam a paleta e facilitam alterar o tema inteiro.
+           As cores X, Y e Z seguem a convenção visual dos eixos cartesianos.
+           ================================================================ */
         :root {
             --ink: #182832;
             --muted: #687780;
@@ -22,10 +29,12 @@
             --z: #3778dc;
         }
 
+        /* Normalização: padding e borda passam a fazer parte do tamanho final. */
         * { box-sizing: border-box; }
 
         html, body { width: 100%; min-height: 100%; margin: 0; }
 
+        /* A página ocupa toda a janela e impede rolagem no modo desktop. */
         body {
             min-height: 100vh;
             min-height: 100svh;
@@ -37,6 +46,10 @@
 
         button, input, select { font: inherit; }
 
+        /* ================================================================
+           2. CABEÇALHO
+           Contém identidade do projeto, status e ações principais.
+           ================================================================ */
         .topbar {
             height: 4.25rem;
             display: flex;
@@ -88,6 +101,7 @@
             box-shadow: 0 0 0 4px rgba(43, 155, 105, 0.13);
         }
 
+        /* Botão reutilizável para gerar, exportar, restaurar e recentralizar. */
         .button {
             min-height: 2.55rem;
             display: inline-flex;
@@ -110,6 +124,10 @@
         .button.primary { border-color: var(--ink); color: white; background: var(--ink); }
         .button.primary:hover { background: #29404d; }
 
+        /* ================================================================
+           3. ÁREA DE TRABALHO
+           Divide a tela entre painel de edição e viewport tridimensional.
+           ================================================================ */
         .workspace {
             height: calc(100vh - 4.25rem);
             height: calc(100svh - 4.25rem);
@@ -117,6 +135,7 @@
             grid-template-columns: minmax(18rem, 21rem) minmax(0, 1fr);
         }
 
+        /* Painel rolável que reúne os controles da cena. */
         .editor {
             overflow-y: auto;
             padding: 1.25rem;
@@ -130,6 +149,7 @@
         .editor-intro h2 em { color: var(--accent); font-style: normal; }
         .editor-intro p { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.74rem; line-height: 1.5; }
 
+        /* Cada seção agrupa controles com a mesma finalidade. */
         .tool-section { padding: 1.1rem 0; border-top: 1px solid var(--line); }
 
         .section-title {
@@ -151,6 +171,7 @@
 
         .field label, .range-head label { color: var(--muted); font-size: 0.69rem; font-weight: 600; }
 
+        /* Seletores de geometria e material. */
         select {
             width: 100%;
             height: 2.65rem;
@@ -163,6 +184,7 @@
             cursor: pointer;
         }
 
+        /* Campo composto pelo seletor de cor e seu valor hexadecimal. */
         .color-control {
             height: 2.65rem;
             display: flex;
@@ -193,6 +215,7 @@
         .range-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; }
         output { color: var(--ink); font-family: "DM Mono", monospace; font-size: 0.64rem; }
 
+        /* Sliders alteram scale, rotation e position em tempo real. */
         input[type="range"] {
             width: 100%;
             height: 1.1rem;
@@ -203,6 +226,7 @@
 
         .toggles { display: grid; gap: 0.45rem; }
 
+        /* Checkboxes controlam a visibilidade e a animação da cena. */
         .toggle {
             min-height: 2.5rem;
             display: flex;
@@ -222,6 +246,10 @@
 
         .sidebar-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
 
+        /* ================================================================
+           4. VIEWPORT 3D
+           O canvas ocupa todo o espaço restante; elementos HTML ficam sobre ele.
+           ================================================================ */
         .viewport { position: relative; min-width: 0; overflow: hidden; background: #e7e1f3; }
 
         .viewport::after {
@@ -237,6 +265,7 @@
         #scene { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
         #scene:active { cursor: grabbing; }
 
+        /* Legenda HTML das cores dos eixos X, Y e Z. */
         .axis-legend {
             position: absolute;
             top: 1.2rem;
@@ -284,6 +313,7 @@
             pointer-events: none;
         }
 
+        /* Mensagem temporária exibida após exportar a imagem. */
         .toast {
             position: absolute;
             left: 50%;
@@ -303,6 +333,10 @@
 
         .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+        /* ================================================================
+           5. RESPONSIVIDADE E ACESSIBILIDADE
+           No celular, viewport e editor passam a formar uma coluna.
+           ================================================================ */
         @media (max-width: 780px) {
             body { overflow: auto; }
             .topbar { height: 4rem; position: sticky; top: 0; z-index: 10; }
@@ -320,12 +354,14 @@
             .canvas-hint { display: none; }
         }
 
+        /* Respeita a preferência do sistema por menos movimento. */
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { transition-duration: 0.01ms !important; }
         }
     </style>
 </head>
 <body>
+    <!-- Cabeçalho global: nome do estúdio e ações de geração/exportação. -->
     <header class="topbar">
         <div class="brand">
             <span class="brand-mark" aria-hidden="true">XYZ</span>
@@ -341,13 +377,16 @@
         </div>
     </header>
 
+    <!-- Workspace contém o painel de parâmetros e a visualização Three.js. -->
     <main class="workspace">
+        <!-- Painel de edição: todos os inputs são conectados ao JavaScript. -->
         <aside class="editor" aria-label="Ferramentas de edição">
             <div class="editor-intro">
-                <h2><em>Monumento</em> Orbital.</h2>
-                <p>Uma escultura fálica surreal, monumental e completamente editável.</p>
+                <h2><em>Aurora</em> Orbital.</h2>
+                <p>Uma escultura abstrata cinética, luminosa e completamente editável.</p>
             </div>
 
+            <!-- 01: escolhe a geometria, o tipo de material e a cor do Mesh. -->
             <section class="tool-section">
                 <h3 class="section-title">Objeto <span>01</span></h3>
                 <div class="field">
@@ -357,9 +396,8 @@
                         <option value="box">Cubo</option>
                         <option value="sphere">Esfera</option>
                         <option value="torus">Anel</option>
-                        <option value="knot">Nó toroidal</option>
+                        <option value="knot" selected>Nó toroidal</option>
                         <option value="cone">Cone</option>
-                        <option value="monolith" selected>Monolito XL</option>
                     </select>
                 </div>
                 <div class="field-row">
@@ -368,41 +406,43 @@
                         <select id="material">
                             <option value="glossy">Brilhante</option>
                             <option value="matte">Fosco</option>
-                            <option value="metal" selected>Metal</option>
-                            <option value="glass">Vidro</option>
+                            <option value="metal">Metal</option>
+                            <option value="glass" selected>Vidro</option>
                             <option value="wire">Aramado</option>
                         </select>
                     </div>
                     <div class="field">
                         <label for="object-color">Cor</label>
                         <div class="color-control">
-                            <input id="object-color" type="color" value="#e96f78">
-                            <span class="color-value" id="object-color-value">#E96F78</span>
+                            <input id="object-color" type="color" value="#7561ff">
+                            <span class="color-value" id="object-color-value">#7561FF</span>
                         </div>
                     </div>
                 </div>
             </section>
 
+            <!-- 02: aplica scale e rotation nos três eixos ao objectHolder. -->
             <section class="tool-section">
                 <h3 class="section-title">Transformar <span>02</span></h3>
                 <div class="range-field">
-                    <div class="range-head"><label for="scale">Escala</label><output id="scale-output">1.20</output></div>
-                    <input id="scale" type="range" min="0.4" max="2.2" value="1.2" step="0.01">
+                    <div class="range-head"><label for="scale">Escala</label><output id="scale-output">1.15</output></div>
+                    <input id="scale" type="range" min="0.4" max="2.2" value="1.15" step="0.01">
                 </div>
                 <div class="range-field">
-                    <div class="range-head"><label for="rotation-x">Rotação X</label><output id="rotation-x-output">4°</output></div>
-                    <input id="rotation-x" type="range" min="0" max="360" value="4" step="1">
+                    <div class="range-head"><label for="rotation-x">Rotação X</label><output id="rotation-x-output">18°</output></div>
+                    <input id="rotation-x" type="range" min="0" max="360" value="18" step="1">
                 </div>
                 <div class="range-field">
-                    <div class="range-head"><label for="rotation-y">Rotação Y</label><output id="rotation-y-output">18°</output></div>
-                    <input id="rotation-y" type="range" min="0" max="360" value="18" step="1">
+                    <div class="range-head"><label for="rotation-y">Rotação Y</label><output id="rotation-y-output">32°</output></div>
+                    <input id="rotation-y" type="range" min="0" max="360" value="32" step="1">
                 </div>
                 <div class="range-field">
-                    <div class="range-head"><label for="rotation-z">Rotação Z</label><output id="rotation-z-output">3°</output></div>
-                    <input id="rotation-z" type="range" min="0" max="360" value="3" step="1">
+                    <div class="range-head"><label for="rotation-z">Rotação Z</label><output id="rotation-z-output">8°</output></div>
+                    <input id="rotation-z" type="range" min="0" max="360" value="8" step="1">
                 </div>
             </section>
 
+            <!-- 03: aplica position em X, Y e Z ao objeto central. -->
             <section class="tool-section">
                 <h3 class="section-title">Posição <span>03</span></h3>
                 <div class="range-field">
@@ -410,8 +450,8 @@
                     <input id="position-x" type="range" min="-3" max="3" value="0" step="0.1">
                 </div>
                 <div class="range-field">
-                    <div class="range-head"><label for="position-y">Eixo Y</label><output id="position-y-output">2.5</output></div>
-                    <input id="position-y" type="range" min="0" max="4" value="2.5" step="0.1">
+                    <div class="range-head"><label for="position-y">Eixo Y</label><output id="position-y-output">1.5</output></div>
+                    <input id="position-y" type="range" min="0" max="4" value="1.5" step="0.1">
                 </div>
                 <div class="range-field">
                     <div class="range-head"><label for="position-z">Eixo Z</label><output id="position-z-output">0.0</output></div>
@@ -419,6 +459,7 @@
                 </div>
             </section>
 
+            <!-- 04: altera fundo, grade, eixos, rotação automática e atmosfera. -->
             <section class="tool-section">
                 <h3 class="section-title">Cena <span>04</span></h3>
                 <div class="field">
@@ -442,6 +483,7 @@
             </div>
         </aside>
 
+        <!-- Viewport: o renderer desenha a cena dentro deste canvas. -->
         <section class="viewport" aria-label="Pré-visualização 3D">
             <canvas id="scene" aria-label="Cena 3D editável"></canvas>
             <ul class="axis-legend" id="axis-legend" aria-label="Legenda dos eixos">
@@ -452,33 +494,42 @@
         </section>
     </main>
 
+    <!-- Import map permite importar Three.js e seus módulos diretamente do CDN. -->
     <script type="importmap">
         { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/" } }
     </script>
+    <!-- O módulo abaixo contém toda a construção e interação da cena 3D. -->
     <script type="module">
+        // Biblioteca principal e controle orbital da câmera.
         import * as THREE from "three";
         import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-        import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
+        // Atalho para querySelector e referências aos elementos principais da página.
         const $ = (selector) => document.querySelector(selector);
         const canvas = $("#scene");
         const viewport = $(".viewport");
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+        // SCENE é o contêiner raiz de todos os objetos, luzes e câmera.
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xe7e1f3);
         scene.fog = new THREE.Fog(0xe7e1f3, 15, 29);
 
+        // PERSPECTIVECAMERA simula profundidade: FOV 40°, aspect inicial 1, near 0.1 e far 100.
         const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
         const defaultCameraPosition = new THREE.Vector3(7.4, 5.6, 9.2);
+        // position coloca a câmera fora da origem para enxergar a composição.
         camera.position.copy(defaultCameraPosition);
 
+        // WEBGLRENDERER converte a cena 3D em pixels no canvas usando a GPU.
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+        // Limitar o pixel ratio a 2 equilibra nitidez e desempenho.
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.14;
 
+        // FUNDO: um canvas 2D vira textura e acompanha a câmera como plano de fundo.
         scene.add(camera);
         const backdropCanvas = document.createElement("canvas");
         backdropCanvas.width = backdropCanvas.height = 1024;
@@ -493,6 +544,7 @@
         backdrop.renderOrder = -100;
         camera.add(backdrop);
 
+        // Redesenha o gradiente sempre que o usuário muda a cor de fundo.
         function updateBackdrop(baseColor) {
             const ctx = backdropContext;
             ctx.fillStyle = baseColor;
@@ -522,6 +574,7 @@
 
         updateBackdrop("#e7e1f3");
 
+        // CONTROLES: OrbitControls permite orbitar e aproximar com mouse/toque.
         const controls = new OrbitControls(camera, canvas);
         controls.enableDamping = true;
         controls.enablePan = false;
@@ -531,30 +584,37 @@
         controls.autoRotate = !reduceMotion.matches;
         controls.autoRotateSpeed = 0.5;
 
+        // ILUMINAÇÃO: luz ambiente hemisférica + luz principal + luz de preenchimento.
         scene.add(new THREE.HemisphereLight(0xffffff, 0x71858b, 2.1));
         const keyLight = new THREE.DirectionalLight(0xffffff, 4.8);
+        // position define de onde vem a luz principal.
         keyLight.position.set(5, 9, 7);
         scene.add(keyLight);
         const fillLight = new THREE.PointLight(0x5a8cff, 22, 18);
         fillLight.position.set(-5, 4, -4);
         scene.add(fillLight);
 
+        // PISO: Mesh = CircleGeometry + MeshStandardMaterial.
         const floor = new THREE.Mesh(
             new THREE.CircleGeometry(7, 96),
             new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.24, roughness: 1 })
         );
+        // rotation de -90° deita o círculo no plano XZ; position evita conflito com a grade.
         floor.rotation.x = -Math.PI / 2;
         floor.position.y = -0.015;
         scene.add(floor);
 
+        // Grade de referência para visualizar unidades e profundidade nos eixos X e Z.
         const grid = new THREE.GridHelper(14, 14, 0x71848c, 0xa5b6b5);
         grid.material.transparent = true;
         grid.material.opacity = 0.38;
         scene.add(grid);
 
+        // Grupo que permite mostrar ou esconder os três eixos de uma só vez.
         const axesGroup = new THREE.Group();
         scene.add(axesGroup);
 
+        // Cria uma etiqueta 2D (Sprite) que sempre fica voltada para a câmera.
         function createTextSprite(text, color) {
             const labelCanvas = document.createElement("canvas");
             labelCanvas.width = labelCanvas.height = 128;
@@ -578,11 +638,13 @@
             return sprite;
         }
 
+        // Monta um eixo com haste cilíndrica, ponta cônica e etiqueta X/Y/Z.
         function createAxis(direction, color, label) {
             const group = new THREE.Group();
             const length = 4.8;
             const material = new THREE.MeshStandardMaterial({ color, roughness: 0.45, emissive: color, emissiveIntensity: 0.07 });
             const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, length, 14), material);
+            // A haste nasce na origem e se estende no sentido positivo do eixo.
             shaft.position.y = length / 2;
             group.add(shaft);
             const tip = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.42, 20), material);
@@ -591,28 +653,34 @@
             const tag = createTextSprite(label, `#${color.toString(16).padStart(6, "0")}`);
             tag.position.y = length + 0.72;
             group.add(tag);
+            // O eixo é criado em Y e então orientado para a direção recebida.
             group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
             axesGroup.add(group);
         }
 
+        // Eixo X vermelho, eixo Y verde e eixo Z azul.
         createAxis(new THREE.Vector3(1, 0, 0), 0xe9504f, "X");
         createAxis(new THREE.Vector3(0, 1, 0), 0x2b9b69, "Y");
         createAxis(new THREE.Vector3(0, 0, 1), 0x3778dc, "Z");
 
+        // OBJETO CENTRAL: o Group recebe position, rotation e scale como conjunto.
         const objectHolder = new THREE.Group();
         scene.add(objectHolder);
         let activeMesh;
         let edgeMesh;
 
+        // ATMOSFERA: agrupa brilho, anéis, partículas e fragmentos decorativos.
         const atmosphereGroup = new THREE.Group();
         scene.add(atmosphereGroup);
 
+        // Textura procedural do brilho; não depende de arquivo de imagem externo.
         const glowCanvas = document.createElement("canvas");
         glowCanvas.width = glowCanvas.height = 256;
         const glowContext = glowCanvas.getContext("2d");
         const glowTexture = new THREE.CanvasTexture(glowCanvas);
         glowTexture.colorSpace = THREE.SRGBColorSpace;
 
+        // Recolore a aura de acordo com a cor escolhida para o objeto central.
         function updateGlow(color) {
             glowContext.clearRect(0, 0, 256, 256);
             const gradient = glowContext.createRadialGradient(128, 128, 0, 128, 128, 128);
@@ -626,6 +694,7 @@
         }
 
         updateGlow("#7561ff");
+        // Sprite grande e escalado cria o halo luminoso atrás da escultura.
         const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
             map: glowTexture,
             transparent: true,
@@ -636,6 +705,7 @@
         glowSprite.scale.set(6.4, 6.4, 1);
         atmosphereGroup.add(glowSprite);
 
+        // Três TorusGeometry com cores, rotações e velocidades diferentes.
         const orbitalRings = [
             { radius: 2.25, color: 0xef6a3a, rotation: [1.1, 0.15, 0.4] },
             { radius: 2.75, color: 0x6958d8, rotation: [0.35, 0.8, 1.05] },
@@ -651,6 +721,7 @@
                     depthWrite: false
                 })
             );
+            // rotation inicial garante que os anéis ocupem planos 3D distintos.
             ring.rotation.set(...config.rotation);
             ring.userData.baseRotation = new THREE.Euler(...config.rotation);
             ring.userData.speed = 0.08 + index * 0.035;
@@ -658,6 +729,7 @@
             return ring;
         });
 
+        // CAMPO DE PARTÍCULAS: 520 vértices distribuídos em coordenadas X/Y/Z.
         const particlePositions = [];
         for (let index = 0; index < 520; index += 1) {
             const radius = 2.7 + Math.random() * 4.4;
@@ -665,6 +737,7 @@
             const elevation = (Math.random() - 0.5) * 3.8;
             particlePositions.push(Math.cos(angle) * radius, elevation, Math.sin(angle) * radius);
         }
+        // BufferGeometry armazena todas as posições em uma única estrutura eficiente.
         const particleGeometry = new THREE.BufferGeometry();
         particleGeometry.setAttribute("position", new THREE.Float32BufferAttribute(particlePositions, 3));
         const particles = new THREE.Points(
@@ -681,6 +754,7 @@
         );
         atmosphereGroup.add(particles);
 
+        // FRAGMENTOS: 34 TetrahedronGeometry visíveis garantem múltiplos objetos na cena.
         const shardGroup = new THREE.Group();
         const shardPalette = [0xef6a3a, 0x6958d8, 0x30b894, 0xffffff];
         const shards = [];
@@ -698,12 +772,14 @@
             );
             const radius = 2.6 + Math.random() * 3.1;
             const angle = (index / 34) * Math.PI * 2 + Math.random() * 0.45;
+            // Cada fragmento recebe position X/Y/Z e rotation próprias.
             shard.position.set(
                 Math.cos(angle) * radius,
                 (Math.random() - 0.5) * 4.1,
                 Math.sin(angle) * radius
             );
             shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+            // userData guarda parâmetros usados depois pelo loop de animação.
             shard.userData = {
                 phase: Math.random() * Math.PI * 2,
                 spin: 0.18 + Math.random() * 0.45,
@@ -714,6 +790,7 @@
         }
         atmosphereGroup.add(shardGroup);
 
+        // Núcleo interno animado; fica mais evidente quando o material é vidro.
         const innerCore = new THREE.Mesh(
             new THREE.IcosahedronGeometry(0.55, 2),
             new THREE.MeshBasicMaterial({ color: 0xffb48b, transparent: true, opacity: 0.58, blending: THREE.AdditiveBlending, depthWrite: false })
@@ -722,46 +799,17 @@
         const coreLight = new THREE.PointLight(0xff8f68, 12, 8);
         objectHolder.add(coreLight);
 
-        function createMonolithGeometry() {
-            const profile = [
-                new THREE.Vector2(0, -2.38),
-                new THREE.Vector2(0.38, -2.34),
-                new THREE.Vector2(0.54, -2.12),
-                new THREE.Vector2(0.57, -1.55),
-                new THREE.Vector2(0.6, 0.72),
-                new THREE.Vector2(0.68, 1.16),
-                new THREE.Vector2(0.88, 1.42),
-                new THREE.Vector2(0.96, 1.67),
-                new THREE.Vector2(0.84, 1.91),
-                new THREE.Vector2(0.56, 2.14),
-                new THREE.Vector2(0.18, 2.34),
-                new THREE.Vector2(0, 2.39)
-            ];
-            const shaft = new THREE.LatheGeometry(profile, 96);
-            const leftBase = new THREE.SphereGeometry(0.78, 48, 32);
-            leftBase.scale(1, 0.86, 0.94);
-            leftBase.translate(-0.62, -2.25, 0);
-            const rightBase = new THREE.SphereGeometry(0.78, 48, 32);
-            rightBase.scale(1, 0.86, 0.94);
-            rightBase.translate(0.62, -2.25, 0);
-            const merged = mergeGeometries([shaft, leftBase, rightBase], false);
-            shaft.dispose();
-            leftBase.dispose();
-            rightBase.dispose();
-            merged.computeVertexNormals();
-            return merged;
-        }
-
+        // Catálogo: cada opção do select chama uma função que cria uma geometria nova.
         const geometryFactories = {
             icosahedron: () => new THREE.IcosahedronGeometry(1.35, 2),
             box: () => new THREE.BoxGeometry(2.25, 2.25, 2.25, 4, 4, 4),
             sphere: () => new THREE.SphereGeometry(1.45, 64, 40),
             torus: () => new THREE.TorusGeometry(1.35, 0.48, 32, 100),
             knot: () => new THREE.TorusKnotGeometry(1.05, 0.34, 160, 24),
-            cone: () => new THREE.ConeGeometry(1.4, 2.8, 48, 8),
-            monolith: createMonolithGeometry
+            cone: () => new THREE.ConeGeometry(1.4, 2.8, 48, 8)
         };
 
+        // Fábrica de materiais: converte a escolha da interface em Material do Three.js.
         function createMaterial(type, color) {
             const common = { color: new THREE.Color(color) };
             if (type === "matte") return new THREE.MeshStandardMaterial({ ...common, roughness: 0.82, metalness: 0 });
@@ -771,6 +819,7 @@
             return new THREE.MeshPhysicalMaterial({ ...common, roughness: 0.18, metalness: 0.16, clearcoat: 1, clearcoatRoughness: 0.08 });
         }
 
+        // Reconstrói o Mesh ao trocar geometria, material ou cor.
         function rebuildObject() {
             if (activeMesh) {
                 objectHolder.remove(activeMesh);
@@ -782,13 +831,16 @@
                 edgeMesh.geometry.dispose();
                 edgeMesh.material.dispose();
             }
+            // Obtém a Geometry selecionada e cria o Material correspondente.
             const geometry = geometryFactories[$("#geometry").value]();
             const objectColor = $("#object-color").value;
+            // Mesh combina obrigatoriamente uma geometria com um material.
             activeMesh = new THREE.Mesh(
                 geometry,
                 createMaterial($("#material").value, objectColor)
             );
             objectHolder.add(activeMesh);
+            // EdgesGeometry desenha um contorno discreto sobre o objeto.
             edgeMesh = new THREE.LineSegments(
                 new THREE.EdgesGeometry(geometry, 24),
                 new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending })
@@ -799,15 +851,19 @@
             updateGlow(objectColor);
         }
 
+        // Aplica os sliders ao objeto: scale, rotation X/Y/Z e position X/Y/Z.
         function updateTransform() {
             const toRadians = (degrees) => THREE.MathUtils.degToRad(Number(degrees));
             const scale = Number($("#scale").value);
+            // scale uniforme altera largura, altura e profundidade ao mesmo tempo.
             objectHolder.scale.setScalar(scale);
+            // Three.js trabalha com radianos, por isso os graus são convertidos.
             objectHolder.rotation.set(
                 toRadians($("#rotation-x").value),
                 toRadians($("#rotation-y").value),
                 toRadians($("#rotation-z").value)
             );
+            // position desloca o grupo nas três coordenadas cartesianas.
             objectHolder.position.set(
                 Number($("#position-x").value),
                 Number($("#position-y").value),
@@ -817,6 +873,7 @@
             atmosphereGroup.scale.setScalar(0.9 + scale * 0.1);
         }
 
+        // EVENTOS DOS SLIDERS: atualizam o valor textual e reaplicam a transformação.
         const ranges = ["scale", "rotation-x", "rotation-y", "rotation-z", "position-x", "position-y", "position-z"];
         ranges.forEach((id) => {
             const input = $(`#${id}`);
@@ -829,13 +886,16 @@
             });
         });
 
+        // Mudanças de geometria ou material exigem recriar o Mesh.
         ["geometry", "material"].forEach((id) => $(`#${id}`).addEventListener("change", rebuildObject));
 
+        // A cor altera tanto o material do objeto quanto sua aura luminosa.
         $("#object-color").addEventListener("input", (event) => {
             $("#object-color-value").textContent = event.target.value.toUpperCase();
             rebuildObject();
         });
 
+        // A cor de fundo também atualiza fog e textura procedural para manter coerência.
         $("#background-color").addEventListener("input", (event) => {
             const color = event.target.value;
             $("#background-color-value").textContent = color.toUpperCase();
@@ -845,34 +905,37 @@
             updateBackdrop(color);
         });
 
+        // Checkboxes ligam e desligam partes da cena por meio da propriedade visible.
         $("#show-grid").addEventListener("change", (event) => { grid.visible = event.target.checked; floor.visible = event.target.checked; });
         $("#show-axes").addEventListener("change", (event) => { axesGroup.visible = event.target.checked; $("#axis-legend").hidden = !event.target.checked; });
         $("#auto-rotate").addEventListener("change", (event) => { controls.autoRotate = event.target.checked && !reduceMotion.matches; });
         $("#show-atmosphere").addEventListener("change", (event) => { atmosphereGroup.visible = event.target.checked; });
 
+        // Altera um input por código e dispara o mesmo fluxo usado pela interação humana.
         function setInput(id, value) {
             const input = $(`#${id}`);
             input.value = value;
             input.dispatchEvent(new Event("input"));
         }
 
+        // Restaura todos os parâmetros iniciais da composição.
         function resetStudio() {
-            $("#geometry").value = "monolith";
-            $("#material").value = "metal";
-            $("#object-color").value = "#e96f78";
-            $("#object-color-value").textContent = "#E96F78";
+            $("#geometry").value = "knot";
+            $("#material").value = "glass";
+            $("#object-color").value = "#7561ff";
+            $("#object-color-value").textContent = "#7561FF";
             $("#background-color").value = "#e7e1f3";
             $("#background-color-value").textContent = "#E7E1F3";
             viewport.style.background = "#e7e1f3";
             scene.background.set(0xe7e1f3);
             scene.fog.color.set(0xe7e1f3);
             updateBackdrop("#e7e1f3");
-            setInput("scale", 1.2);
-            setInput("rotation-x", 4);
-            setInput("rotation-y", 18);
-            setInput("rotation-z", 3);
+            setInput("scale", 1.15);
+            setInput("rotation-x", 18);
+            setInput("rotation-y", 32);
+            setInput("rotation-z", 8);
             setInput("position-x", 0);
-            setInput("position-y", 2.5);
+            setInput("position-y", 1.5);
             setInput("position-z", 0);
             $("#show-grid").checked = true;
             $("#show-axes").checked = true;
@@ -885,12 +948,14 @@
             rebuildObject();
         }
 
+        // Devolve a câmera à posição padrão e aponta para o centro da escultura.
         function centerCamera() {
             camera.position.copy(defaultCameraPosition);
             controls.target.set(0, 1.7, 0);
             controls.update();
         }
 
+        // Paletas, formas e materiais usados pelo gerador aleatório.
         const palettes = [
             ["#ef6a3a", "#dce7e2"],
             ["#6657d9", "#eee9f6"],
@@ -901,6 +966,7 @@
         const shapes = Object.keys(geometryFactories);
         const materials = ["glossy", "matte", "metal", "glass", "wire"];
 
+        // Cria uma variação escolhendo forma, material, cores, escala e rotações.
         $("#randomize").addEventListener("click", () => {
             const palette = palettes[Math.floor(Math.random() * palettes.length)];
             $("#geometry").value = shapes[Math.floor(Math.random() * shapes.length)];
@@ -919,6 +985,7 @@
         $("#reset").addEventListener("click", resetStudio);
         $("#center-camera").addEventListener("click", centerCamera);
 
+        // Feedback visual reutilizável para sucesso ou falha de exportação.
         let toastTimer;
         function showToast(message) {
             const toast = $("#toast");
@@ -928,6 +995,7 @@
             toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
         }
 
+        // EXPORTAÇÃO: renderiza temporariamente em Full HD e salva o canvas como PNG.
         let exporting = false;
         $("#download").addEventListener("click", () => {
             exporting = true;
@@ -936,11 +1004,13 @@
             const originalPixelRatio = renderer.getPixelRatio();
             const originalAspect = camera.aspect;
             renderer.setPixelRatio(1);
+            // A resolução 1920x1080 é usada apenas na imagem final.
             renderer.setSize(1920, 1080, false);
             camera.aspect = 16 / 9;
             camera.updateProjectionMatrix();
             renderer.render(scene, camera);
             canvas.toBlob((blob) => {
+                // Após gerar o PNG, restaura tamanho e proporção da tela.
                 renderer.setPixelRatio(originalPixelRatio);
                 renderer.setSize(displayWidth, displayHeight, false);
                 camera.aspect = originalAspect;
@@ -956,6 +1026,7 @@
             }, "image/png");
         });
 
+        // Mantém renderer e PerspectiveCamera sincronizados com o tamanho do canvas.
         function resizeRenderer() {
             const width = canvas.clientWidth;
             const height = canvas.clientHeight;
@@ -967,21 +1038,26 @@
             }
         }
 
+        // LOOP DE ANIMAÇÃO: Clock fornece tempo contínuo independente do FPS.
         const clock = new THREE.Clock();
         function animate() {
             const elapsed = clock.getElapsedTime();
             if (!reduceMotion.matches) {
+                // Anéis oscilam e giram em velocidades diferentes.
                 orbitalRings.forEach((ring, index) => {
                     ring.rotation.x = ring.userData.baseRotation.x + Math.sin(elapsed * 0.34 + index) * 0.12;
                     ring.rotation.z = ring.userData.baseRotation.z + elapsed * ring.userData.speed;
                 });
+                // Partículas e o grupo de fragmentos giram em sentidos/ritmos próprios.
                 particles.rotation.y = -elapsed * 0.035;
                 shardGroup.rotation.y = elapsed * 0.055;
+                // Cada fragmento gira e flutua verticalmente usando seno.
                 shards.forEach((shard) => {
                     shard.rotation.x = shard.userData.phase + elapsed * shard.userData.spin;
                     shard.rotation.y = shard.userData.phase - elapsed * shard.userData.spin * 0.7;
                     shard.position.y = shard.userData.baseY + Math.sin(elapsed * 0.7 + shard.userData.phase) * 0.18;
                 });
+                // O núcleo gira e o brilho pulsa pela variação de opacidade.
                 innerCore.rotation.x = elapsed * 0.31;
                 innerCore.rotation.y = -elapsed * 0.42;
                 glowSprite.material.opacity = 0.66 + Math.sin(elapsed * 1.15) * 0.09;
@@ -989,9 +1065,11 @@
             if (!exporting) resizeRenderer();
             controls.update();
             if (!exporting) renderer.render(scene, camera);
+            // Agenda o próximo quadro no ciclo de atualização do navegador.
             requestAnimationFrame(animate);
         }
 
+        // INICIALIZAÇÃO: cria o objeto, aplica transformações, posiciona a câmera e anima.
         rebuildObject();
         updateTransform();
         centerCamera();
