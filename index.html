@@ -1,1079 +1,512 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <!-- Metadados básicos: codificação, responsividade, descrição e título da aba. -->
+    <!-- Configurações básicas da página. -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Estúdio 3D interativo com Three.js para criar e exportar imagens.">
-    <title>XYZ Studio — Editor 3D</title>
-    <!-- Fontes externas usadas na interface do editor (não afetam a geometria 3D). -->
+    <meta name="description" content="Mini Cidade 3D construída com primitivas simples do Three.js.">
+    <title>Mini Cidade 3D — Three.js</title>
+
+    <!-- Fontes usadas apenas na interface informativa. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+
     <style>
-        /* ================================================================
-           1. TOKENS VISUAIS
-           Variáveis centralizam a paleta e facilitam alterar o tema inteiro.
-           As cores X, Y e Z seguem a convenção visual dos eixos cartesianos.
-           ================================================================ */
+        /* Paleta centralizada para facilitar a manutenção do visual. */
         :root {
-            --ink: #182832;
-            --muted: #687780;
-            --shell: #f2f0e8;
-            --panel: #fbfaf5;
-            --line: #d9d8d0;
-            --accent: #6958d8;
-            --accent-dark: #4c3bad;
-            --x: #e9504f;
-            --y: #2b9b69;
-            --z: #3778dc;
+            --ink: #16313d;
+            --muted: #607680;
+            --paper: #eef3ee;
+            --panel: rgba(252, 253, 249, 0.9);
+            --line: rgba(22, 49, 61, 0.14);
+            --blue: #376fd0;
+            --green: #3d9b6d;
+            --orange: #ee7848;
+            --yellow: #e7b23f;
         }
 
-        /* Normalização: padding e borda passam a fazer parte do tamanho final. */
+        /* Normalização de medidas. */
         * { box-sizing: border-box; }
 
-        html, body { width: 100%; min-height: 100%; margin: 0; }
+        html, body {
+            width: 100%;
+            min-height: 100%;
+            margin: 0;
+        }
 
-        /* A página ocupa toda a janela e impede rolagem no modo desktop. */
         body {
             min-height: 100vh;
             min-height: 100svh;
             overflow: hidden;
             color: var(--ink);
-            background: var(--shell);
+            background: var(--paper);
             font-family: "Manrope", sans-serif;
         }
 
-        button, input, select { font: inherit; }
+        /* A aplicação ocupa toda a janela. */
+        .app {
+            width: 100vw;
+            min-height: 100vh;
+            min-height: 100svh;
+            display: grid;
+            grid-template-columns: minmax(18rem, 22rem) 1fr;
+        }
 
-        /* ================================================================
-           2. CABEÇALHO
-           Contém identidade do projeto, status e ações principais.
-           ================================================================ */
-        .topbar {
-            height: 4.25rem;
+        /* Painel textual que resume o que existe na cena. */
+        .info-panel {
+            position: relative;
+            z-index: 2;
             display: flex;
-            align-items: center;
+            flex-direction: column;
             justify-content: space-between;
-            gap: 1rem;
-            padding: 0 clamp(1rem, 3vw, 2.5rem);
-            border-bottom: 1px solid var(--line);
-            background: rgba(242, 240, 232, 0.92);
-        }
-
-        .brand { display: flex; align-items: center; gap: 0.85rem; }
-
-        .brand-mark {
-            display: grid;
-            width: 2rem;
-            height: 2rem;
-            place-items: center;
-            border-radius: 0.45rem;
-            color: white;
-            background: var(--ink);
-            font-family: "DM Mono", monospace;
-            font-size: 0.7rem;
-            letter-spacing: -0.08em;
-        }
-
-        .brand h1 { margin: 0; font-size: 1rem; font-weight: 700; letter-spacing: -0.035em; }
-        .brand p { margin: 0.12rem 0 0; color: var(--muted); font-size: 0.64rem; }
-
-        .top-actions { display: flex; align-items: center; gap: 0.65rem; }
-
-        .status {
-            display: flex;
-            align-items: center;
-            gap: 0.48rem;
-            margin-right: 0.45rem;
-            color: var(--muted);
-            font-family: "DM Mono", monospace;
-            font-size: 0.62rem;
-            text-transform: uppercase;
-        }
-
-        .status::before {
-            width: 0.42rem;
-            height: 0.42rem;
-            border-radius: 50%;
-            content: "";
-            background: var(--y);
-            box-shadow: 0 0 0 4px rgba(43, 155, 105, 0.13);
-        }
-
-        /* Botão reutilizável para gerar, exportar, restaurar e recentralizar. */
-        .button {
-            min-height: 2.55rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0 1rem;
-            border: 1px solid var(--line);
-            border-radius: 0.65rem;
-            color: var(--ink);
-            background: var(--panel);
-            font-size: 0.75rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-        }
-
-        .button:hover { border-color: #aeadA6; transform: translateY(-1px); }
-        .button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid rgba(55, 120, 220, 0.25); outline-offset: 2px; }
-        .button.primary { border-color: var(--ink); color: white; background: var(--ink); }
-        .button.primary:hover { background: #29404d; }
-
-        /* ================================================================
-           3. ÁREA DE TRABALHO
-           Divide a tela entre painel de edição e viewport tridimensional.
-           ================================================================ */
-        .workspace {
-            height: calc(100vh - 4.25rem);
-            height: calc(100svh - 4.25rem);
-            display: grid;
-            grid-template-columns: minmax(18rem, 21rem) minmax(0, 1fr);
-        }
-
-        /* Painel rolável que reúne os controles da cena. */
-        .editor {
-            overflow-y: auto;
-            padding: 1.25rem;
+            gap: 2rem;
+            padding: clamp(1.5rem, 4vw, 3.2rem);
             border-right: 1px solid var(--line);
             background: var(--panel);
-            scrollbar-width: thin;
+            backdrop-filter: blur(18px);
         }
 
-        .editor-intro { margin-bottom: 1.35rem; }
-        .editor-intro h2 { margin: 0; font-size: 1.45rem; letter-spacing: -0.05em; }
-        .editor-intro h2 em { color: var(--accent); font-style: normal; }
-        .editor-intro p { margin: 0.45rem 0 0; color: var(--muted); font-size: 0.74rem; line-height: 1.5; }
-
-        /* Cada seção agrupa controles com a mesma finalidade. */
-        .tool-section { padding: 1.1rem 0; border-top: 1px solid var(--line); }
-
-        .section-title {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 0 0 0.8rem;
+        .eyebrow {
+            margin: 0 0 1rem;
+            color: var(--blue);
             font-family: "DM Mono", monospace;
-            font-size: 0.66rem;
+            font-size: 0.68rem;
             font-weight: 500;
-            letter-spacing: 0.11em;
+            letter-spacing: 0.14em;
             text-transform: uppercase;
         }
 
-        .section-title span { color: #9a9a93; font-weight: 400; }
-        .field { display: grid; gap: 0.42rem; margin-bottom: 0.85rem; }
-        .field:last-child { margin-bottom: 0; }
-        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
-
-        .field label, .range-head label { color: var(--muted); font-size: 0.69rem; font-weight: 600; }
-
-        /* Seletores de geometria e material. */
-        select {
-            width: 100%;
-            height: 2.65rem;
-            padding: 0 2.25rem 0 0.75rem;
-            border: 1px solid var(--line);
-            border-radius: 0.6rem;
-            color: var(--ink);
-            background: #f4f3ed;
-            font-size: 0.76rem;
-            cursor: pointer;
-        }
-
-        /* Campo composto pelo seletor de cor e seu valor hexadecimal. */
-        .color-control {
-            height: 2.65rem;
-            display: flex;
-            align-items: center;
-            gap: 0.65rem;
-            padding: 0.3rem 0.7rem 0.3rem 0.35rem;
-            border: 1px solid var(--line);
-            border-radius: 0.6rem;
-            background: #f4f3ed;
-        }
-
-        input[type="color"] {
-            width: 2rem;
-            height: 2rem;
-            padding: 0;
-            border: 0;
-            border-radius: 0.42rem;
-            background: transparent;
-            cursor: pointer;
-        }
-
-        input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
-        input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 0.38rem; }
-        .color-value { font-family: "DM Mono", monospace; font-size: 0.68rem; text-transform: uppercase; }
-
-        .range-field { margin-bottom: 0.8rem; }
-        .range-field:last-child { margin-bottom: 0; }
-        .range-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.35rem; }
-        output { color: var(--ink); font-family: "DM Mono", monospace; font-size: 0.64rem; }
-
-        /* Sliders alteram scale, rotation e position em tempo real. */
-        input[type="range"] {
-            width: 100%;
-            height: 1.1rem;
+        h1 {
             margin: 0;
-            accent-color: var(--accent);
-            cursor: pointer;
+            font-size: clamp(2.7rem, 6vw, 5.2rem);
+            font-weight: 700;
+            letter-spacing: -0.075em;
+            line-height: 0.88;
         }
 
-        .toggles { display: grid; gap: 0.45rem; }
+        .description {
+            max-width: 26rem;
+            margin: 1.35rem 0 0;
+            color: var(--muted);
+            font-size: 0.86rem;
+            line-height: 1.65;
+        }
 
-        /* Checkboxes controlam a visibilidade e a animação da cena. */
-        .toggle {
-            min-height: 2.5rem;
+        /* Cards apresentam evidências objetivas da rubrica. */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.55rem;
+            margin: 2rem 0 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .stat {
+            min-height: 5.1rem;
+            padding: 0.85rem;
+            border: 1px solid var(--line);
+            border-radius: 0.85rem;
+            background: rgba(255, 255, 255, 0.55);
+        }
+
+        .stat strong {
+            display: block;
+            font-family: "DM Mono", monospace;
+            font-size: 1.45rem;
+        }
+
+        .stat span {
+            display: block;
+            margin-top: 0.25rem;
+            color: var(--muted);
+            font-size: 0.65rem;
+            line-height: 1.35;
+        }
+
+        .legend {
+            display: grid;
+            gap: 0.55rem;
+            margin: 0;
+            padding: 1rem 0 0;
+            border-top: 1px solid var(--line);
+            list-style: none;
+        }
+
+        .legend li {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
-            padding: 0 0.7rem;
-            border: 1px solid var(--line);
-            border-radius: 0.6rem;
             color: var(--muted);
-            background: #f4f3ed;
-            font-size: 0.7rem;
-            cursor: pointer;
+            font-size: 0.68rem;
         }
 
-        .toggle input { width: 1rem; height: 1rem; accent-color: var(--accent); }
-
-        .sidebar-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 0.55rem; padding-top: 1.1rem; border-top: 1px solid var(--line); }
-
-        /* ================================================================
-           4. VIEWPORT 3D
-           O canvas ocupa todo o espaço restante; elementos HTML ficam sobre ele.
-           ================================================================ */
-        .viewport { position: relative; min-width: 0; overflow: hidden; background: #e7e1f3; }
-
-        .viewport::after {
-            position: absolute;
-            inset: 1.2rem;
-            border: 1px solid rgba(255,255,255,0.42);
-            border-radius: 1rem;
-            content: "";
-            pointer-events: none;
-            mask-image: linear-gradient(135deg, black 0 12%, transparent 24% 76%, black 88% 100%);
-        }
-
-        #scene { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
-        #scene:active { cursor: grabbing; }
-
-        /* Legenda HTML das cores dos eixos X, Y e Z. */
-        .axis-legend {
-            position: absolute;
-            top: 1.2rem;
-            left: 1.2rem;
-            display: flex;
-            gap: 0.35rem;
-            margin: 0;
-            padding: 0.45rem;
-            border: 1px solid rgba(255,255,255,0.65);
-            border-radius: 0.72rem;
-            background: rgba(250,250,246,0.72);
-            box-shadow: 0 0.8rem 2rem rgba(24,40,50,0.08);
-            list-style: none;
-            backdrop-filter: blur(12px);
-            pointer-events: none;
-        }
-
-        .axis-legend li {
-            min-width: 2.25rem;
-            padding: 0.42rem 0.5rem;
-            border-radius: 0.42rem;
-            color: white;
+        .legend code {
+            color: var(--ink);
             font-family: "DM Mono", monospace;
-            font-size: 0.63rem;
-            font-weight: 500;
-            text-align: center;
+            font-size: 0.64rem;
         }
 
-        .axis-legend li:nth-child(1) { background: var(--x); }
-        .axis-legend li:nth-child(2) { background: var(--y); }
-        .axis-legend li:nth-child(3) { background: var(--z); }
+        /* O renderer do Three.js desenha dentro deste canvas. */
+        .viewport {
+            position: relative;
+            min-width: 0;
+            min-height: 100vh;
+            min-height: 100svh;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 65% 20%, rgba(255, 255, 255, 0.86), transparent 35%),
+                #dce8ec;
+        }
 
-        .canvas-hint {
+        #scene {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .scene-label {
             position: absolute;
-            right: 1.2rem;
-            bottom: 1.2rem;
+            right: 1.35rem;
+            bottom: 1.35rem;
             margin: 0;
-            padding: 0.6rem 0.75rem;
-            border-radius: 0.55rem;
-            color: #5e7079;
-            background: rgba(250,250,246,0.72);
+            padding: 0.7rem 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            border-radius: 0.65rem;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.62);
             font-family: "DM Mono", monospace;
-            font-size: 0.6rem;
+            font-size: 0.62rem;
             backdrop-filter: blur(10px);
             pointer-events: none;
         }
 
-        /* Mensagem temporária exibida após exportar a imagem. */
-        .toast {
-            position: absolute;
-            left: 50%;
-            bottom: 1.2rem;
-            z-index: 5;
-            padding: 0.72rem 1rem;
-            border-radius: 999px;
-            color: white;
-            background: var(--ink);
-            font-size: 0.7rem;
-            font-weight: 700;
-            opacity: 0;
-            pointer-events: none;
-            transform: translate(-50%, 0.75rem);
-            transition: opacity 180ms ease, transform 180ms ease;
-        }
-
-        .toast.show { opacity: 1; transform: translate(-50%, 0); }
-
-        /* ================================================================
-           5. RESPONSIVIDADE E ACESSIBILIDADE
-           No celular, viewport e editor passam a formar uma coluna.
-           ================================================================ */
-        @media (max-width: 780px) {
+        /* Em telas menores, a cena aparece antes do painel. */
+        @media (max-width: 760px) {
             body { overflow: auto; }
-            .topbar { height: 4rem; position: sticky; top: 0; z-index: 10; }
-            .status, .top-actions .secondary { display: none; }
-            .workspace { height: auto; min-height: calc(100svh - 4rem); display: flex; flex-direction: column; }
-            .viewport { height: 54svh; min-height: 24rem; order: 1; }
-            .editor { overflow: visible; order: 2; border-top: 1px solid var(--line); border-right: 0; }
-            .editor-intro p { max-width: 28rem; }
-            .field-row { grid-template-columns: 1fr 1fr; }
-        }
 
-        @media (max-width: 430px) {
-            .brand p { display: none; }
-            .button { padding: 0 0.8rem; }
-            .canvas-hint { display: none; }
-        }
+            .app {
+                display: flex;
+                flex-direction: column;
+            }
 
-        /* Respeita a preferência do sistema por menos movimento. */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { transition-duration: 0.01ms !important; }
+            .viewport {
+                min-height: 58svh;
+                order: 1;
+            }
+
+            .info-panel {
+                order: 2;
+                border-top: 1px solid var(--line);
+                border-right: 0;
+            }
+
+            h1 { font-size: clamp(3rem, 16vw, 4.8rem); }
         }
     </style>
 </head>
+
 <body>
-    <!-- Cabeçalho global: nome do estúdio e ações de geração/exportação. -->
-    <header class="topbar">
-        <div class="brand">
-            <span class="brand-mark" aria-hidden="true">XYZ</span>
+    <main class="app">
+        <!-- Informações resumidas da composição e das transformações. -->
+        <aside class="info-panel">
             <div>
-                <h1>XYZ Studio</h1>
-                <p>Esculturas generativas em Three.js</p>
-            </div>
-        </div>
-        <div class="top-actions">
-            <span class="status">Cena ativa</span>
-            <button class="button secondary" id="randomize" type="button">Gerar nova arte</button>
-            <button class="button primary" id="download" type="button">Baixar PNG</button>
-        </div>
-    </header>
+                <p class="eyebrow">Computação gráfica · Three.js</p>
+                <h1>Mini<br>Cidade 3D</h1>
+                <p class="description">
+                    Cena estática construída apenas com primitivas simples. Cada objeto possui
+                    um nome claro e foi posicionado conscientemente nos eixos X, Y e Z.
+                </p>
 
-    <!-- Workspace contém o painel de parâmetros e a visualização Three.js. -->
-    <main class="workspace">
-        <!-- Painel de edição: todos os inputs são conectados ao JavaScript. -->
-        <aside class="editor" aria-label="Ferramentas de edição">
-            <div class="editor-intro">
-                <h2><em>Aurora</em> Orbital.</h2>
-                <p>Uma escultura abstrata cinética, luminosa e completamente editável.</p>
+                <ul class="stats" aria-label="Resumo dos requisitos">
+                    <li class="stat"><strong>17</strong><span>objetos 3D visíveis</span></li>
+                    <li class="stat"><strong>5</strong><span>tipos de geometria</span></li>
+                    <li class="stat"><strong>8</strong><span>cores diferentes</span></li>
+                    <li class="stat"><strong>0</strong><span>animações</span></li>
+                </ul>
             </div>
 
-            <!-- 01: escolhe a geometria, o tipo de material e a cor do Mesh. -->
-            <section class="tool-section">
-                <h3 class="section-title">Objeto <span>01</span></h3>
-                <div class="field">
-                    <label for="geometry">Forma</label>
-                    <select id="geometry">
-                        <option value="icosahedron">Icosaedro</option>
-                        <option value="box">Cubo</option>
-                        <option value="sphere">Esfera</option>
-                        <option value="torus">Anel</option>
-                        <option value="knot" selected>Nó toroidal</option>
-                        <option value="cone">Cone</option>
-                    </select>
-                </div>
-                <div class="field-row">
-                    <div class="field">
-                        <label for="material">Material</label>
-                        <select id="material">
-                            <option value="glossy">Brilhante</option>
-                            <option value="matte">Fosco</option>
-                            <option value="metal">Metal</option>
-                            <option value="glass" selected>Vidro</option>
-                            <option value="wire">Aramado</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label for="object-color">Cor</label>
-                        <div class="color-control">
-                            <input id="object-color" type="color" value="#7561ff">
-                            <span class="color-value" id="object-color-value">#7561FF</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 02: aplica scale e rotation nos três eixos ao objectHolder. -->
-            <section class="tool-section">
-                <h3 class="section-title">Transformar <span>02</span></h3>
-                <div class="range-field">
-                    <div class="range-head"><label for="scale">Escala</label><output id="scale-output">1.15</output></div>
-                    <input id="scale" type="range" min="0.4" max="2.2" value="1.15" step="0.01">
-                </div>
-                <div class="range-field">
-                    <div class="range-head"><label for="rotation-x">Rotação X</label><output id="rotation-x-output">18°</output></div>
-                    <input id="rotation-x" type="range" min="0" max="360" value="18" step="1">
-                </div>
-                <div class="range-field">
-                    <div class="range-head"><label for="rotation-y">Rotação Y</label><output id="rotation-y-output">32°</output></div>
-                    <input id="rotation-y" type="range" min="0" max="360" value="32" step="1">
-                </div>
-                <div class="range-field">
-                    <div class="range-head"><label for="rotation-z">Rotação Z</label><output id="rotation-z-output">8°</output></div>
-                    <input id="rotation-z" type="range" min="0" max="360" value="8" step="1">
-                </div>
-            </section>
-
-            <!-- 03: aplica position em X, Y e Z ao objeto central. -->
-            <section class="tool-section">
-                <h3 class="section-title">Posição <span>03</span></h3>
-                <div class="range-field">
-                    <div class="range-head"><label for="position-x">Eixo X</label><output id="position-x-output">0.0</output></div>
-                    <input id="position-x" type="range" min="-3" max="3" value="0" step="0.1">
-                </div>
-                <div class="range-field">
-                    <div class="range-head"><label for="position-y">Eixo Y</label><output id="position-y-output">1.5</output></div>
-                    <input id="position-y" type="range" min="0" max="4" value="1.5" step="0.1">
-                </div>
-                <div class="range-field">
-                    <div class="range-head"><label for="position-z">Eixo Z</label><output id="position-z-output">0.0</output></div>
-                    <input id="position-z" type="range" min="-3" max="3" value="0" step="0.1">
-                </div>
-            </section>
-
-            <!-- 04: altera fundo, grade, eixos, rotação automática e atmosfera. -->
-            <section class="tool-section">
-                <h3 class="section-title">Cena <span>04</span></h3>
-                <div class="field">
-                    <label for="background-color">Cor do fundo</label>
-                    <div class="color-control">
-                        <input id="background-color" type="color" value="#e7e1f3">
-                        <span class="color-value" id="background-color-value">#E7E1F3</span>
-                    </div>
-                </div>
-                <div class="toggles">
-                    <label class="toggle">Mostrar grade <input id="show-grid" type="checkbox" checked></label>
-                    <label class="toggle">Mostrar eixos XYZ <input id="show-axes" type="checkbox" checked></label>
-                    <label class="toggle">Girar câmera <input id="auto-rotate" type="checkbox" checked></label>
-                    <label class="toggle">Atmosfera orbital <input id="show-atmosphere" type="checkbox" checked></label>
-                </div>
-            </section>
-
-            <div class="sidebar-actions">
-                <button class="button" id="reset" type="button">Restaurar</button>
-                <button class="button" id="center-camera" type="button">Recentrar vista</button>
-            </div>
+            <ul class="legend" aria-label="Transformações demonstradas">
+                <li><span>Posição cartesiana</span><code>position.set(x, y, z)</code></li>
+                <li><span>Rotação dos objetos</span><code>rotation.y</code></li>
+                <li><span>Escala individual</span><code>scale.set(x, y, z)</code></li>
+            </ul>
         </aside>
 
-        <!-- Viewport: o renderer desenha a cena dentro deste canvas. -->
-        <section class="viewport" aria-label="Pré-visualização 3D">
-            <canvas id="scene" aria-label="Cena 3D editável"></canvas>
-            <ul class="axis-legend" id="axis-legend" aria-label="Legenda dos eixos">
-                <li>X</li><li>Y</li><li>Z</li>
-            </ul>
-            <p class="canvas-hint">arraste para orbitar · roda para zoom</p>
-            <p class="toast" id="toast" role="status">Imagem baixada</p>
+        <!-- Área onde a cena tridimensional é renderizada. -->
+        <section class="viewport" aria-label="Visualização da Mini Cidade 3D">
+            <canvas id="scene" aria-label="Cena estática com uma pequena cidade tridimensional"></canvas>
+            <p class="scene-label">Cena estática · sem loop de animação</p>
         </section>
     </main>
 
-    <!-- Import map permite importar Three.js e seus módulos diretamente do CDN. -->
+    <!-- O import map permite importar Three.js diretamente do CDN. -->
     <script type="importmap">
-        { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.179.1/examples/jsm/" } }
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js"
+            }
+        }
     </script>
-    <!-- O módulo abaixo contém toda a construção e interação da cena 3D. -->
+
     <script type="module">
-        // Biblioteca principal e controle orbital da câmera.
+        // Importa a biblioteca Three.js.
         import * as THREE from "three";
-        import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
-        // Atalho para querySelector e referências aos elementos principais da página.
-        const $ = (selector) => document.querySelector(selector);
-        const canvas = $("#scene");
-        const viewport = $(".viewport");
-        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        // ==================================================================
+        // 1. SCENE, CAMERA E RENDERER
+        // Estes são os três elementos fundamentais de uma aplicação Three.js.
+        // ==================================================================
 
-        // SCENE é o contêiner raiz de todos os objetos, luzes e câmera.
+        // Scene funciona como o contêiner de todos os elementos 3D.
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xe7e1f3);
-        scene.fog = new THREE.Fog(0xe7e1f3, 15, 29);
+        scene.background = new THREE.Color(0xdce8ec);
 
-        // PERSPECTIVECAMERA simula profundidade: FOV 40°, aspect inicial 1, near 0.1 e far 100.
-        const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
-        const defaultCameraPosition = new THREE.Vector3(7.4, 5.6, 9.2);
-        // position coloca a câmera fora da origem para enxergar a composição.
-        camera.position.copy(defaultCameraPosition);
+        // PerspectiveCamera cria a sensação de profundidade e perspectiva.
+        const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+        camera.position.set(9, 7, 12);
+        camera.lookAt(0, 2, 0);
 
-        // WEBGLRENDERER converte a cena 3D em pixels no canvas usando a GPU.
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
-        // Limitar o pixel ratio a 2 equilibra nitidez e desempenho.
+        // WebGLRenderer desenha a cena no canvas usando a placa gráfica.
+        const canvas = document.querySelector("#scene");
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.outputColorSpace = THREE.SRGBColorSpace;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.14;
 
-        // FUNDO: um canvas 2D vira textura e acompanha a câmera como plano de fundo.
-        scene.add(camera);
-        const backdropCanvas = document.createElement("canvas");
-        backdropCanvas.width = backdropCanvas.height = 1024;
-        const backdropContext = backdropCanvas.getContext("2d");
-        const backdropTexture = new THREE.CanvasTexture(backdropCanvas);
-        backdropTexture.colorSpace = THREE.SRGBColorSpace;
-        const backdrop = new THREE.Mesh(
-            new THREE.PlaneGeometry(40, 28),
-            new THREE.MeshBasicMaterial({ map: backdropTexture, depthTest: false, depthWrite: false })
+        // ==================================================================
+        // 2. MATERIAIS E CORES
+        // Cada material pode ser reutilizado por vários objetos.
+        // ==================================================================
+
+        const greenMaterial = new THREE.MeshStandardMaterial({ color: 0x62a878 });
+        const blueMaterial = new THREE.MeshStandardMaterial({ color: 0x3975d2 });
+        const lightBlueMaterial = new THREE.MeshStandardMaterial({ color: 0x6ec5d4 });
+        const orangeMaterial = new THREE.MeshStandardMaterial({ color: 0xee7848 });
+        const yellowMaterial = new THREE.MeshStandardMaterial({ color: 0xe7b23f });
+        const purpleMaterial = new THREE.MeshStandardMaterial({ color: 0x7966c5 });
+        const grayMaterial = new THREE.MeshStandardMaterial({ color: 0x647982 });
+        const brownMaterial = new THREE.MeshStandardMaterial({ color: 0x8d6248 });
+        const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x3a4c54 });
+
+        // ==================================================================
+        // 3. PISO E ELEMENTOS CENTRAIS
+        // Mesh é sempre a combinação de uma Geometry com um Material.
+        // ==================================================================
+
+        // Objeto 1: piso horizontal da cidade.
+        const cityGround = new THREE.Mesh(
+            new THREE.PlaneGeometry(14, 12),
+            greenMaterial
         );
-        backdrop.position.set(0, 0, -20);
-        backdrop.renderOrder = -100;
-        camera.add(backdrop);
+        cityGround.rotation.x = -Math.PI / 2;
+        cityGround.position.set(0, 0, 0);
+        scene.add(cityGround);
 
-        // Redesenha o gradiente sempre que o usuário muda a cor de fundo.
-        function updateBackdrop(baseColor) {
-            const ctx = backdropContext;
-            ctx.fillStyle = baseColor;
-            ctx.fillRect(0, 0, 1024, 1024);
-
-            const coral = ctx.createRadialGradient(165, 210, 0, 165, 210, 620);
-            coral.addColorStop(0, "rgba(255, 135, 105, 0.42)");
-            coral.addColorStop(0.52, "rgba(255, 174, 128, 0.12)");
-            coral.addColorStop(1, "rgba(255, 174, 128, 0)");
-            ctx.fillStyle = coral;
-            ctx.fillRect(0, 0, 1024, 1024);
-
-            const violet = ctx.createRadialGradient(860, 160, 0, 860, 160, 680);
-            violet.addColorStop(0, "rgba(105, 88, 216, 0.38)");
-            violet.addColorStop(0.55, "rgba(117, 97, 255, 0.1)");
-            violet.addColorStop(1, "rgba(117, 97, 255, 0)");
-            ctx.fillStyle = violet;
-            ctx.fillRect(0, 0, 1024, 1024);
-
-            const mint = ctx.createRadialGradient(720, 900, 0, 720, 900, 560);
-            mint.addColorStop(0, "rgba(72, 202, 174, 0.25)");
-            mint.addColorStop(1, "rgba(72, 202, 174, 0)");
-            ctx.fillStyle = mint;
-            ctx.fillRect(0, 0, 1024, 1024);
-            backdropTexture.needsUpdate = true;
-        }
-
-        updateBackdrop("#e7e1f3");
-
-        // CONTROLES: OrbitControls permite orbitar e aproximar com mouse/toque.
-        const controls = new OrbitControls(camera, canvas);
-        controls.enableDamping = true;
-        controls.enablePan = false;
-        controls.minDistance = 5;
-        controls.maxDistance = 20;
-        controls.target.set(0, 1.7, 0);
-        controls.autoRotate = !reduceMotion.matches;
-        controls.autoRotateSpeed = 0.5;
-
-        // ILUMINAÇÃO: luz ambiente hemisférica + luz principal + luz de preenchimento.
-        scene.add(new THREE.HemisphereLight(0xffffff, 0x71858b, 2.1));
-        const keyLight = new THREE.DirectionalLight(0xffffff, 4.8);
-        // position define de onde vem a luz principal.
-        keyLight.position.set(5, 9, 7);
-        scene.add(keyLight);
-        const fillLight = new THREE.PointLight(0x5a8cff, 22, 18);
-        fillLight.position.set(-5, 4, -4);
-        scene.add(fillLight);
-
-        // PISO: Mesh = CircleGeometry + MeshStandardMaterial.
-        const floor = new THREE.Mesh(
-            new THREE.CircleGeometry(7, 96),
-            new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.24, roughness: 1 })
+        // Objeto 2: estrada atravessando o centro da composição.
+        const mainRoad = new THREE.Mesh(
+            new THREE.BoxGeometry(2.2, 0.06, 11),
+            roadMaterial
         );
-        // rotation de -90° deita o círculo no plano XZ; position evita conflito com a grade.
-        floor.rotation.x = -Math.PI / 2;
-        floor.position.y = -0.015;
-        scene.add(floor);
+        mainRoad.position.set(0, 0.04, 0);
+        mainRoad.rotation.y = 0.08;
+        scene.add(mainRoad);
 
-        // Grade de referência para visualizar unidades e profundidade nos eixos X e Z.
-        const grid = new THREE.GridHelper(14, 14, 0x71848c, 0xa5b6b5);
+        // Objeto 3: corpo da torre principal.
+        const centralTowerBody = new THREE.Mesh(
+            new THREE.BoxGeometry(2.2, 3.4, 2.2),
+            blueMaterial
+        );
+        centralTowerBody.position.set(0.2, 1.7, -0.4);
+        centralTowerBody.scale.set(1, 1.15, 1);
+        scene.add(centralTowerBody);
+
+        // Objeto 4: cobertura cônica da torre.
+        const centralTowerRoof = new THREE.Mesh(
+            new THREE.ConeGeometry(1.7, 1.6, 4),
+            orangeMaterial
+        );
+        centralTowerRoof.position.set(0.2, 4.45, -0.4);
+        centralTowerRoof.rotation.y = Math.PI / 4;
+        scene.add(centralTowerRoof);
+
+        // Objeto 5: domo esférico de observação.
+        const observationDome = new THREE.Mesh(
+            new THREE.SphereGeometry(0.72, 32, 20),
+            lightBlueMaterial
+        );
+        observationDome.position.set(0.2, 5.55, -0.4);
+        observationDome.scale.set(1.25, 0.75, 1.25);
+        scene.add(observationDome);
+
+        // Objeto 6: antena cilíndrica no topo.
+        const antennaMast = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.11, 0.11, 1.4, 16),
+            grayMaterial
+        );
+        antennaMast.position.set(0.2, 6.65, -0.4);
+        scene.add(antennaMast);
+
+        // ==================================================================
+        // 4. PRÉDIOS SECUNDÁRIOS
+        // Estes objetos demonstram posições, rotações e escalas diferentes.
+        // ==================================================================
+
+        // Objeto 7: prédio amarelo à esquerda.
+        const leftBuilding = new THREE.Mesh(
+            new THREE.BoxGeometry(1.8, 2.4, 1.8),
+            yellowMaterial
+        );
+        leftBuilding.position.set(-3.6, 1.2, 1.8);
+        leftBuilding.rotation.y = -0.22;
+        leftBuilding.scale.set(0.9, 1.1, 0.9);
+        scene.add(leftBuilding);
+
+        // Objeto 8: prédio roxo à direita.
+        const rightBuilding = new THREE.Mesh(
+            new THREE.BoxGeometry(2, 2.8, 1.7),
+            purpleMaterial
+        );
+        rightBuilding.position.set(3.6, 1.4, 1.4);
+        rightBuilding.rotation.y = 0.28;
+        rightBuilding.scale.set(1.05, 0.82, 0.95);
+        scene.add(rightBuilding);
+
+        // Objeto 9: prédio laranja ao fundo.
+        const backBuilding = new THREE.Mesh(
+            new THREE.BoxGeometry(1.7, 2.1, 1.7),
+            orangeMaterial
+        );
+        backBuilding.position.set(-3.1, 1.05, -3.3);
+        backBuilding.rotation.y = 0.45;
+        scene.add(backBuilding);
+
+        // ==================================================================
+        // 5. PAINÉIS TECNOLÓGICOS
+        // Mais dois objetos visíveis com coordenadas e rotações próprias.
+        // ==================================================================
+
+        // Objeto 10: painel à esquerda da torre.
+        const leftSolarPanel = new THREE.Mesh(
+            new THREE.BoxGeometry(2.5, 0.12, 1.1),
+            blueMaterial
+        );
+        leftSolarPanel.position.set(-2.2, 0.75, -1.3);
+        leftSolarPanel.rotation.set(0.12, -0.38, -0.12);
+        scene.add(leftSolarPanel);
+
+        // Objeto 11: painel à direita da torre.
+        const rightSolarPanel = new THREE.Mesh(
+            new THREE.BoxGeometry(2.5, 0.12, 1.1),
+            lightBlueMaterial
+        );
+        rightSolarPanel.position.set(2.5, 0.75, -1.5);
+        rightSolarPanel.rotation.set(-0.1, 0.34, 0.14);
+        scene.add(rightSolarPanel);
+
+        // ==================================================================
+        // 6. ÁRVORES
+        // Cada árvore possui tronco cilíndrico e copa esférica.
+        // ==================================================================
+
+        // Objeto 12: tronco da primeira árvore.
+        const leftTreeTrunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.24, 1.25, 16),
+            brownMaterial
+        );
+        leftTreeTrunk.position.set(-4.8, 0.62, -0.6);
+        scene.add(leftTreeTrunk);
+
+        // Objeto 13: copa da primeira árvore.
+        const leftTreeCrown = new THREE.Mesh(
+            new THREE.SphereGeometry(0.78, 24, 16),
+            greenMaterial
+        );
+        leftTreeCrown.position.set(-4.8, 1.65, -0.6);
+        leftTreeCrown.scale.set(1.15, 1.3, 1.15);
+        scene.add(leftTreeCrown);
+
+        // Objeto 14: tronco da segunda árvore.
+        const rightTreeTrunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.24, 1.25, 16),
+            brownMaterial
+        );
+        rightTreeTrunk.position.set(4.7, 0.62, -2.2);
+        scene.add(rightTreeTrunk);
+
+        // Objeto 15: copa da segunda árvore.
+        const rightTreeCrown = new THREE.Mesh(
+            new THREE.SphereGeometry(0.78, 24, 16),
+            greenMaterial
+        );
+        rightTreeCrown.position.set(4.7, 1.65, -2.2);
+        rightTreeCrown.scale.set(1.3, 1.05, 1.15);
+        scene.add(rightTreeCrown);
+
+        // Objeto 16: tronco da terceira árvore.
+        const backTreeTrunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.18, 0.24, 1.1, 16),
+            brownMaterial
+        );
+        backTreeTrunk.position.set(3.9, 0.55, 3.8);
+        backTreeTrunk.rotation.z = -0.08;
+        scene.add(backTreeTrunk);
+
+        // Objeto 17: copa da terceira árvore.
+        const backTreeCrown = new THREE.Mesh(
+            new THREE.SphereGeometry(0.72, 24, 16),
+            greenMaterial
+        );
+        backTreeCrown.position.set(3.82, 1.48, 3.8);
+        backTreeCrown.scale.set(1.1, 1.25, 1.1);
+        scene.add(backTreeCrown);
+
+        // ==================================================================
+        // 7. ELEMENTOS DE APOIO
+        // Luzes e guias ajudam a visualizar a composição, mas não são Meshes.
+        // ==================================================================
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.7);
+        scene.add(ambientLight);
+
+        const mainLight = new THREE.DirectionalLight(0xffffff, 3.2);
+        mainLight.position.set(7, 10, 8);
+        scene.add(mainLight);
+
+        // GridHelper evidencia o plano XZ e a profundidade da cena.
+        const grid = new THREE.GridHelper(14, 14, 0x66808c, 0xa8b9bd);
+        grid.position.y = 0.065;
         grid.material.transparent = true;
-        grid.material.opacity = 0.38;
+        grid.material.opacity = 0.28;
         scene.add(grid);
 
-        // Grupo que permite mostrar ou esconder os três eixos de uma só vez.
-        const axesGroup = new THREE.Group();
-        scene.add(axesGroup);
+        // AxesHelper mostra X em vermelho, Y em verde e Z em azul.
+        const axes = new THREE.AxesHelper(5);
+        axes.position.set(-6.4, 0.08, 4.7);
+        scene.add(axes);
 
-        // Cria uma etiqueta 2D (Sprite) que sempre fica voltada para a câmera.
-        function createTextSprite(text, color) {
-            const labelCanvas = document.createElement("canvas");
-            labelCanvas.width = labelCanvas.height = 128;
-            const ctx = labelCanvas.getContext("2d");
-            ctx.fillStyle = "rgba(255,255,255,.94)";
-            ctx.beginPath();
-            ctx.arc(64, 64, 40, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.lineWidth = 5;
-            ctx.strokeStyle = color;
-            ctx.stroke();
-            ctx.fillStyle = color;
-            ctx.font = "700 52px Manrope, sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(text, 64, 61);
-            const texture = new THREE.CanvasTexture(labelCanvas);
-            texture.colorSpace = THREE.SRGBColorSpace;
-            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true }));
-            sprite.scale.set(0.72, 0.72, 0.72);
-            return sprite;
-        }
+        // ==================================================================
+        // 8. RENDERIZAÇÃO ESTÁTICA
+        // A cena é estática e não possui laço contínuo de renderização.
+        // A cena só é redesenhada ao abrir ou redimensionar a janela.
+        // ==================================================================
 
-        // Monta um eixo com haste cilíndrica, ponta cônica e etiqueta X/Y/Z.
-        function createAxis(direction, color, label) {
-            const group = new THREE.Group();
-            const length = 4.8;
-            const material = new THREE.MeshStandardMaterial({ color, roughness: 0.45, emissive: color, emissiveIntensity: 0.07 });
-            const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.028, length, 14), material);
-            // A haste nasce na origem e se estende no sentido positivo do eixo.
-            shaft.position.y = length / 2;
-            group.add(shaft);
-            const tip = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.42, 20), material);
-            tip.position.y = length + 0.18;
-            group.add(tip);
-            const tag = createTextSprite(label, `#${color.toString(16).padStart(6, "0")}`);
-            tag.position.y = length + 0.72;
-            group.add(tag);
-            // O eixo é criado em Y e então orientado para a direção recebida.
-            group.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
-            axesGroup.add(group);
-        }
-
-        // Eixo X vermelho, eixo Y verde e eixo Z azul.
-        createAxis(new THREE.Vector3(1, 0, 0), 0xe9504f, "X");
-        createAxis(new THREE.Vector3(0, 1, 0), 0x2b9b69, "Y");
-        createAxis(new THREE.Vector3(0, 0, 1), 0x3778dc, "Z");
-
-        // OBJETO CENTRAL: o Group recebe position, rotation e scale como conjunto.
-        const objectHolder = new THREE.Group();
-        scene.add(objectHolder);
-        let activeMesh;
-        let edgeMesh;
-
-        // ATMOSFERA: agrupa brilho, anéis, partículas e fragmentos decorativos.
-        const atmosphereGroup = new THREE.Group();
-        scene.add(atmosphereGroup);
-
-        // Textura procedural do brilho; não depende de arquivo de imagem externo.
-        const glowCanvas = document.createElement("canvas");
-        glowCanvas.width = glowCanvas.height = 256;
-        const glowContext = glowCanvas.getContext("2d");
-        const glowTexture = new THREE.CanvasTexture(glowCanvas);
-        glowTexture.colorSpace = THREE.SRGBColorSpace;
-
-        // Recolore a aura de acordo com a cor escolhida para o objeto central.
-        function updateGlow(color) {
-            glowContext.clearRect(0, 0, 256, 256);
-            const gradient = glowContext.createRadialGradient(128, 128, 0, 128, 128, 128);
-            gradient.addColorStop(0, "rgba(255,255,255,0.95)");
-            gradient.addColorStop(0.13, `${color}b8`);
-            gradient.addColorStop(0.45, `${color}32`);
-            gradient.addColorStop(1, `${color}00`);
-            glowContext.fillStyle = gradient;
-            glowContext.fillRect(0, 0, 256, 256);
-            glowTexture.needsUpdate = true;
-        }
-
-        updateGlow("#7561ff");
-        // Sprite grande e escalado cria o halo luminoso atrás da escultura.
-        const glowSprite = new THREE.Sprite(new THREE.SpriteMaterial({
-            map: glowTexture,
-            transparent: true,
-            opacity: 0.75,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        }));
-        glowSprite.scale.set(6.4, 6.4, 1);
-        atmosphereGroup.add(glowSprite);
-
-        // Três TorusGeometry com cores, rotações e velocidades diferentes.
-        const orbitalRings = [
-            { radius: 2.25, color: 0xef6a3a, rotation: [1.1, 0.15, 0.4] },
-            { radius: 2.75, color: 0x6958d8, rotation: [0.35, 0.8, 1.05] },
-            { radius: 3.25, color: 0x30b894, rotation: [1.45, 0.25, 0.8] }
-        ].map((config, index) => {
-            const ring = new THREE.Mesh(
-                new THREE.TorusGeometry(config.radius, 0.022 + index * 0.007, 10, 180),
-                new THREE.MeshBasicMaterial({
-                    color: config.color,
-                    transparent: true,
-                    opacity: 0.56 - index * 0.09,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false
-                })
-            );
-            // rotation inicial garante que os anéis ocupem planos 3D distintos.
-            ring.rotation.set(...config.rotation);
-            ring.userData.baseRotation = new THREE.Euler(...config.rotation);
-            ring.userData.speed = 0.08 + index * 0.035;
-            atmosphereGroup.add(ring);
-            return ring;
-        });
-
-        // CAMPO DE PARTÍCULAS: 520 vértices distribuídos em coordenadas X/Y/Z.
-        const particlePositions = [];
-        for (let index = 0; index < 520; index += 1) {
-            const radius = 2.7 + Math.random() * 4.4;
-            const angle = Math.random() * Math.PI * 2;
-            const elevation = (Math.random() - 0.5) * 3.8;
-            particlePositions.push(Math.cos(angle) * radius, elevation, Math.sin(angle) * radius);
-        }
-        // BufferGeometry armazena todas as posições em uma única estrutura eficiente.
-        const particleGeometry = new THREE.BufferGeometry();
-        particleGeometry.setAttribute("position", new THREE.Float32BufferAttribute(particlePositions, 3));
-        const particles = new THREE.Points(
-            particleGeometry,
-            new THREE.PointsMaterial({
-                color: 0xffffff,
-                size: 0.038,
-                transparent: true,
-                opacity: 0.78,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                sizeAttenuation: true
-            })
-        );
-        atmosphereGroup.add(particles);
-
-        // FRAGMENTOS: 34 TetrahedronGeometry visíveis garantem múltiplos objetos na cena.
-        const shardGroup = new THREE.Group();
-        const shardPalette = [0xef6a3a, 0x6958d8, 0x30b894, 0xffffff];
-        const shards = [];
-        for (let index = 0; index < 34; index += 1) {
-            const shard = new THREE.Mesh(
-                new THREE.TetrahedronGeometry(0.12 + Math.random() * 0.16, 0),
-                new THREE.MeshPhysicalMaterial({
-                    color: shardPalette[index % shardPalette.length],
-                    roughness: 0.2,
-                    metalness: 0.2,
-                    transmission: index % 4 === 3 ? 0.35 : 0,
-                    transparent: true,
-                    opacity: 0.74
-                })
-            );
-            const radius = 2.6 + Math.random() * 3.1;
-            const angle = (index / 34) * Math.PI * 2 + Math.random() * 0.45;
-            // Cada fragmento recebe position X/Y/Z e rotation próprias.
-            shard.position.set(
-                Math.cos(angle) * radius,
-                (Math.random() - 0.5) * 4.1,
-                Math.sin(angle) * radius
-            );
-            shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-            // userData guarda parâmetros usados depois pelo loop de animação.
-            shard.userData = {
-                phase: Math.random() * Math.PI * 2,
-                spin: 0.18 + Math.random() * 0.45,
-                baseY: shard.position.y
-            };
-            shardGroup.add(shard);
-            shards.push(shard);
-        }
-        atmosphereGroup.add(shardGroup);
-
-        // Núcleo interno animado; fica mais evidente quando o material é vidro.
-        const innerCore = new THREE.Mesh(
-            new THREE.IcosahedronGeometry(0.55, 2),
-            new THREE.MeshBasicMaterial({ color: 0xffb48b, transparent: true, opacity: 0.58, blending: THREE.AdditiveBlending, depthWrite: false })
-        );
-        objectHolder.add(innerCore);
-        const coreLight = new THREE.PointLight(0xff8f68, 12, 8);
-        objectHolder.add(coreLight);
-
-        // Catálogo: cada opção do select chama uma função que cria uma geometria nova.
-        const geometryFactories = {
-            icosahedron: () => new THREE.IcosahedronGeometry(1.35, 2),
-            box: () => new THREE.BoxGeometry(2.25, 2.25, 2.25, 4, 4, 4),
-            sphere: () => new THREE.SphereGeometry(1.45, 64, 40),
-            torus: () => new THREE.TorusGeometry(1.35, 0.48, 32, 100),
-            knot: () => new THREE.TorusKnotGeometry(1.05, 0.34, 160, 24),
-            cone: () => new THREE.ConeGeometry(1.4, 2.8, 48, 8)
-        };
-
-        // Fábrica de materiais: converte a escolha da interface em Material do Three.js.
-        function createMaterial(type, color) {
-            const common = { color: new THREE.Color(color) };
-            if (type === "matte") return new THREE.MeshStandardMaterial({ ...common, roughness: 0.82, metalness: 0 });
-            if (type === "metal") return new THREE.MeshStandardMaterial({ ...common, roughness: 0.22, metalness: 0.9 });
-            if (type === "glass") return new THREE.MeshPhysicalMaterial({ ...common, roughness: 0.08, metalness: 0.05, transmission: 0.72, thickness: 1.1, ior: 1.45, transparent: true, opacity: 0.92 });
-            if (type === "wire") return new THREE.MeshBasicMaterial({ ...common, wireframe: true, transparent: true, opacity: 0.88 });
-            return new THREE.MeshPhysicalMaterial({ ...common, roughness: 0.18, metalness: 0.16, clearcoat: 1, clearcoatRoughness: 0.08 });
-        }
-
-        // Reconstrói o Mesh ao trocar geometria, material ou cor.
-        function rebuildObject() {
-            if (activeMesh) {
-                objectHolder.remove(activeMesh);
-                activeMesh.geometry.dispose();
-                activeMesh.material.dispose();
-            }
-            if (edgeMesh) {
-                objectHolder.remove(edgeMesh);
-                edgeMesh.geometry.dispose();
-                edgeMesh.material.dispose();
-            }
-            // Obtém a Geometry selecionada e cria o Material correspondente.
-            const geometry = geometryFactories[$("#geometry").value]();
-            const objectColor = $("#object-color").value;
-            // Mesh combina obrigatoriamente uma geometria com um material.
-            activeMesh = new THREE.Mesh(
-                geometry,
-                createMaterial($("#material").value, objectColor)
-            );
-            objectHolder.add(activeMesh);
-            // EdgesGeometry desenha um contorno discreto sobre o objeto.
-            edgeMesh = new THREE.LineSegments(
-                new THREE.EdgesGeometry(geometry, 24),
-                new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending })
-            );
-            edgeMesh.scale.setScalar(1.012);
-            edgeMesh.visible = $("#material").value !== "wire";
-            objectHolder.add(edgeMesh);
-            updateGlow(objectColor);
-        }
-
-        // Aplica os sliders ao objeto: scale, rotation X/Y/Z e position X/Y/Z.
-        function updateTransform() {
-            const toRadians = (degrees) => THREE.MathUtils.degToRad(Number(degrees));
-            const scale = Number($("#scale").value);
-            // scale uniforme altera largura, altura e profundidade ao mesmo tempo.
-            objectHolder.scale.setScalar(scale);
-            // Three.js trabalha com radianos, por isso os graus são convertidos.
-            objectHolder.rotation.set(
-                toRadians($("#rotation-x").value),
-                toRadians($("#rotation-y").value),
-                toRadians($("#rotation-z").value)
-            );
-            // position desloca o grupo nas três coordenadas cartesianas.
-            objectHolder.position.set(
-                Number($("#position-x").value),
-                Number($("#position-y").value),
-                Number($("#position-z").value)
-            );
-            atmosphereGroup.position.copy(objectHolder.position);
-            atmosphereGroup.scale.setScalar(0.9 + scale * 0.1);
-        }
-
-        // EVENTOS DOS SLIDERS: atualizam o valor textual e reaplicam a transformação.
-        const ranges = ["scale", "rotation-x", "rotation-y", "rotation-z", "position-x", "position-y", "position-z"];
-        ranges.forEach((id) => {
-            const input = $(`#${id}`);
-            const output = $(`#${id}-output`);
-            input.addEventListener("input", () => {
-                if (id.startsWith("rotation")) output.value = `${input.value}°`;
-                else if (id === "scale") output.value = Number(input.value).toFixed(2);
-                else output.value = Number(input.value).toFixed(1);
-                updateTransform();
-            });
-        });
-
-        // Mudanças de geometria ou material exigem recriar o Mesh.
-        ["geometry", "material"].forEach((id) => $(`#${id}`).addEventListener("change", rebuildObject));
-
-        // A cor altera tanto o material do objeto quanto sua aura luminosa.
-        $("#object-color").addEventListener("input", (event) => {
-            $("#object-color-value").textContent = event.target.value.toUpperCase();
-            rebuildObject();
-        });
-
-        // A cor de fundo também atualiza fog e textura procedural para manter coerência.
-        $("#background-color").addEventListener("input", (event) => {
-            const color = event.target.value;
-            $("#background-color-value").textContent = color.toUpperCase();
-            viewport.style.background = color;
-            scene.background.set(color);
-            scene.fog.color.set(color);
-            updateBackdrop(color);
-        });
-
-        // Checkboxes ligam e desligam partes da cena por meio da propriedade visible.
-        $("#show-grid").addEventListener("change", (event) => { grid.visible = event.target.checked; floor.visible = event.target.checked; });
-        $("#show-axes").addEventListener("change", (event) => { axesGroup.visible = event.target.checked; $("#axis-legend").hidden = !event.target.checked; });
-        $("#auto-rotate").addEventListener("change", (event) => { controls.autoRotate = event.target.checked && !reduceMotion.matches; });
-        $("#show-atmosphere").addEventListener("change", (event) => { atmosphereGroup.visible = event.target.checked; });
-
-        // Altera um input por código e dispara o mesmo fluxo usado pela interação humana.
-        function setInput(id, value) {
-            const input = $(`#${id}`);
-            input.value = value;
-            input.dispatchEvent(new Event("input"));
-        }
-
-        // Restaura todos os parâmetros iniciais da composição.
-        function resetStudio() {
-            $("#geometry").value = "knot";
-            $("#material").value = "glass";
-            $("#object-color").value = "#7561ff";
-            $("#object-color-value").textContent = "#7561FF";
-            $("#background-color").value = "#e7e1f3";
-            $("#background-color-value").textContent = "#E7E1F3";
-            viewport.style.background = "#e7e1f3";
-            scene.background.set(0xe7e1f3);
-            scene.fog.color.set(0xe7e1f3);
-            updateBackdrop("#e7e1f3");
-            setInput("scale", 1.15);
-            setInput("rotation-x", 18);
-            setInput("rotation-y", 32);
-            setInput("rotation-z", 8);
-            setInput("position-x", 0);
-            setInput("position-y", 1.5);
-            setInput("position-z", 0);
-            $("#show-grid").checked = true;
-            $("#show-axes").checked = true;
-            $("#auto-rotate").checked = !reduceMotion.matches;
-            $("#show-atmosphere").checked = true;
-            grid.visible = floor.visible = axesGroup.visible = true;
-            atmosphereGroup.visible = true;
-            $("#axis-legend").hidden = false;
-            controls.autoRotate = !reduceMotion.matches;
-            rebuildObject();
-        }
-
-        // Devolve a câmera à posição padrão e aponta para o centro da escultura.
-        function centerCamera() {
-            camera.position.copy(defaultCameraPosition);
-            controls.target.set(0, 1.7, 0);
-            controls.update();
-        }
-
-        // Paletas, formas e materiais usados pelo gerador aleatório.
-        const palettes = [
-            ["#ef6a3a", "#dce7e2"],
-            ["#6657d9", "#eee9f6"],
-            ["#f0b429", "#183642"],
-            ["#38a17a", "#f1e7d2"],
-            ["#e54b64", "#dce5f2"]
-        ];
-        const shapes = Object.keys(geometryFactories);
-        const materials = ["glossy", "matte", "metal", "glass", "wire"];
-
-        // Cria uma variação escolhendo forma, material, cores, escala e rotações.
-        $("#randomize").addEventListener("click", () => {
-            const palette = palettes[Math.floor(Math.random() * palettes.length)];
-            $("#geometry").value = shapes[Math.floor(Math.random() * shapes.length)];
-            $("#material").value = materials[Math.floor(Math.random() * materials.length)];
-            $("#object-color").value = palette[0];
-            $("#object-color-value").textContent = palette[0].toUpperCase();
-            $("#background-color").value = palette[1];
-            $("#background-color").dispatchEvent(new Event("input"));
-            setInput("scale", (0.75 + Math.random() * 0.65).toFixed(2));
-            setInput("rotation-x", Math.floor(Math.random() * 361));
-            setInput("rotation-y", Math.floor(Math.random() * 361));
-            setInput("rotation-z", Math.floor(Math.random() * 361));
-            rebuildObject();
-        });
-
-        $("#reset").addEventListener("click", resetStudio);
-        $("#center-camera").addEventListener("click", centerCamera);
-
-        // Feedback visual reutilizável para sucesso ou falha de exportação.
-        let toastTimer;
-        function showToast(message) {
-            const toast = $("#toast");
-            toast.textContent = message;
-            toast.classList.add("show");
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
-        }
-
-        // EXPORTAÇÃO: renderiza temporariamente em Full HD e salva o canvas como PNG.
-        let exporting = false;
-        $("#download").addEventListener("click", () => {
-            exporting = true;
-            const displayWidth = canvas.clientWidth;
-            const displayHeight = canvas.clientHeight;
-            const originalPixelRatio = renderer.getPixelRatio();
-            const originalAspect = camera.aspect;
-            renderer.setPixelRatio(1);
-            // A resolução 1920x1080 é usada apenas na imagem final.
-            renderer.setSize(1920, 1080, false);
-            camera.aspect = 16 / 9;
-            camera.updateProjectionMatrix();
-            renderer.render(scene, camera);
-            canvas.toBlob((blob) => {
-                // Após gerar o PNG, restaura tamanho e proporção da tela.
-                renderer.setPixelRatio(originalPixelRatio);
-                renderer.setSize(displayWidth, displayHeight, false);
-                camera.aspect = originalAspect;
-                camera.updateProjectionMatrix();
-                exporting = false;
-                if (!blob) { showToast("Não foi possível gerar a imagem"); return; }
-                const link = document.createElement("a");
-                link.download = `aurora-orbital-${Date.now()}.png`;
-                link.href = URL.createObjectURL(blob);
-                link.click();
-                URL.revokeObjectURL(link.href);
-                showToast("Imagem PNG baixada");
-            }, "image/png");
-        });
-
-        // Mantém renderer e PerspectiveCamera sincronizados com o tamanho do canvas.
-        function resizeRenderer() {
+        function renderScene() {
             const width = canvas.clientWidth;
             const height = canvas.clientHeight;
-            const pixelRatio = renderer.getPixelRatio();
-            if (canvas.width !== Math.floor(width * pixelRatio) || canvas.height !== Math.floor(height * pixelRatio)) {
-                renderer.setSize(width, height, false);
-                camera.aspect = width / height;
-                camera.updateProjectionMatrix();
-            }
+
+            renderer.setSize(width, height, false);
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.render(scene, camera);
         }
 
-        // LOOP DE ANIMAÇÃO: Clock fornece tempo contínuo independente do FPS.
-        const clock = new THREE.Clock();
-        function animate() {
-            const elapsed = clock.getElapsedTime();
-            if (!reduceMotion.matches) {
-                // Anéis oscilam e giram em velocidades diferentes.
-                orbitalRings.forEach((ring, index) => {
-                    ring.rotation.x = ring.userData.baseRotation.x + Math.sin(elapsed * 0.34 + index) * 0.12;
-                    ring.rotation.z = ring.userData.baseRotation.z + elapsed * ring.userData.speed;
-                });
-                // Partículas e o grupo de fragmentos giram em sentidos/ritmos próprios.
-                particles.rotation.y = -elapsed * 0.035;
-                shardGroup.rotation.y = elapsed * 0.055;
-                // Cada fragmento gira e flutua verticalmente usando seno.
-                shards.forEach((shard) => {
-                    shard.rotation.x = shard.userData.phase + elapsed * shard.userData.spin;
-                    shard.rotation.y = shard.userData.phase - elapsed * shard.userData.spin * 0.7;
-                    shard.position.y = shard.userData.baseY + Math.sin(elapsed * 0.7 + shard.userData.phase) * 0.18;
-                });
-                // O núcleo gira e o brilho pulsa pela variação de opacidade.
-                innerCore.rotation.x = elapsed * 0.31;
-                innerCore.rotation.y = -elapsed * 0.42;
-                glowSprite.material.opacity = 0.66 + Math.sin(elapsed * 1.15) * 0.09;
-            }
-            if (!exporting) resizeRenderer();
-            controls.update();
-            if (!exporting) renderer.render(scene, camera);
-            // Agenda o próximo quadro no ciclo de atualização do navegador.
-            requestAnimationFrame(animate);
-        }
+        // Renderização inicial.
+        renderScene();
 
-        // INICIALIZAÇÃO: cria o objeto, aplica transformações, posiciona a câmera e anima.
-        rebuildObject();
-        updateTransform();
-        centerCamera();
-        animate();
+        // Atualiza somente quando o tamanho da janela muda; isso não é animação.
+        window.addEventListener("resize", renderScene);
     </script>
 </body>
 </html>

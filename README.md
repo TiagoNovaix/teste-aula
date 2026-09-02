@@ -1,97 +1,102 @@
-# Aurora Orbital — Cena 3D com Three.js
+# Mini Cidade 3D
 
 ## Integrantes
 
-> **PREENCHER ANTES DA ENTREGA:** nomes completos de todos os integrantes do grupo.
-
-- Integrante 1: ______________________________
-- Integrante 2: ______________________________
-- Integrante 3: ______________________________
-- Integrante 4: ______________________________
-- Integrante 5: ______________________________
+- **Integrante 1:** Tiago Abreu Novaes — 2625924
+- **Integrante 2:** Raphael Galiaço da Cunha — 2631785
+- **Integrante 3:** Herick Luccas Lemos Rocha — 2663928
 
 ## Descrição da cena
 
-O projeto apresenta uma composição tridimensional generativa chamada **Aurora Orbital**. A cena possui uma escultura abstrata central editável, eixos cartesianos X, Y e Z, piso, grade, anéis orbitais, partículas, fragmentos geométricos, iluminação e fundo procedural. O usuário pode alterar a geometria, o material, as cores e as transformações do objeto principal e exportar a composição como imagem PNG.
+O projeto apresenta uma **mini cidade futurista estática**, criada com JavaScript e Three.js. A composição possui uma torre central com cobertura e domo, três prédios, dois painéis solares, três árvores, uma rua e um terreno. Os eixos X, Y e Z e uma grade auxiliam na visualização do espaço tridimensional.
+
+A cena foi planejada para demonstrar de forma direta os requisitos da atividade. Ela não possui animação: o desenho é realizado uma vez ao carregar a página e novamente apenas quando o tamanho da janela muda.
+
+## Tecnologias utilizadas
+
+- HTML5;
+- CSS3;
+- JavaScript com módulos ES;
+- Three.js.
 
 ## Geometrias utilizadas
 
-- `PlaneGeometry`: plano de fundo que acompanha a câmera.
-- `CircleGeometry`: piso circular da composição.
-- `CylinderGeometry`: hastes dos eixos X, Y e Z.
-- `ConeGeometry`: pontas dos eixos e opção de forma central.
-- `TorusGeometry`: anéis orbitais.
-- `TetrahedronGeometry`: fragmentos distribuídos pela cena.
-- `IcosahedronGeometry`: núcleo luminoso e opção de forma central.
-- `SphereGeometry`: componentes da base e opção de forma central.
-- `BoxGeometry`: opção de cubo para o objeto central.
-- `TorusKnotGeometry`: opção de nó toroidal.
-- `BufferGeometry`: armazenamento eficiente das posições das partículas.
+- `PlaneGeometry`: terreno;
+- `BoxGeometry`: rua, prédios, torre e painéis solares;
+- `ConeGeometry`: cobertura da torre;
+- `SphereGeometry`: domo e copas das árvores;
+- `CylinderGeometry`: antena e troncos das árvores.
 
 ## Transformações utilizadas
 
-### `position`
+- `position`: posiciona os elementos em diferentes coordenadas dos eixos X, Y e Z;
+- `rotation`: rotaciona o terreno, a rua, a cobertura, prédios, painéis solares e um tronco;
+- `scale`: altera as proporções da torre, do domo, de prédios e das copas das árvores.
 
-- A câmera é posicionada em `(7.4, 5.6, 9.2)` para enquadrar a composição.
-- As luzes são posicionadas em pontos diferentes para iluminar o objeto.
-- Os 34 fragmentos recebem coordenadas X, Y e Z próprias.
-- O objeto central pode ser deslocado nos três eixos pelos controles do painel.
+## Objetos visíveis
 
-### `rotation`
+A composição possui **17 objetos do tipo `THREE.Mesh`**, portanto supera o mínimo de 10 objetos 3D visíveis:
 
-- O piso recebe rotação de `-90°` no eixo X para ficar horizontal.
-- Os três anéis orbitais possuem rotações iniciais diferentes.
-- Os fragmentos recebem rotações aleatórias e continuam girando durante a animação.
-- O objeto central pode ser rotacionado nos eixos X, Y e Z.
+1. terreno da cidade;
+2. rua principal;
+3. corpo da torre central;
+4. cobertura da torre;
+5. domo de observação;
+6. antena;
+7. prédio esquerdo;
+8. prédio direito;
+9. prédio do fundo;
+10. painel solar esquerdo;
+11. painel solar direito;
+12. tronco da árvore esquerda;
+13. copa da árvore esquerda;
+14. tronco da árvore direita;
+15. copa da árvore direita;
+16. tronco da árvore do fundo;
+17. copa da árvore do fundo.
 
-### `scale`
+## Conferência dos requisitos
 
-- O objeto central recebe escala uniforme controlada por um slider.
-- As etiquetas dos eixos e a aura luminosa utilizam escalas próprias.
-- O contorno do objeto é ligeiramente ampliado para aparecer sobre a superfície.
-
-## Principais conceitos do Three.js
-
-- `THREE.Scene`: contém todos os elementos tridimensionais.
-- `THREE.PerspectiveCamera`: define o ponto de vista e a perspectiva.
-- `THREE.WebGLRenderer`: renderiza a cena no elemento `<canvas>`.
-- `THREE.Mesh`: combina uma geometria e um material.
-- `scene.add()`: adiciona câmera, luzes, objetos e grupos à cena.
-- `requestAnimationFrame()`: atualiza continuamente movimento e renderização.
-
-## Como executar
-
-O projeto utiliza módulos JavaScript e deve ser aberto por um servidor local.
-
-### Opção 1 — Live Server
-
-1. Abra a pasta do projeto no Visual Studio Code.
-2. Instale a extensão **Live Server**.
-3. Clique com o botão direito em `index.html`.
-4. Escolha **Open with Live Server**.
-
-### Opção 2 — Python
-
-Na pasta do projeto, execute:
-
-```bash
-python -m http.server 4173
-```
-
-Depois acesse `http://localhost:4173` no navegador.
+| Requisito | Como foi atendido |
+| --- | --- |
+| 10 objetos 3D visíveis | A cena possui 17 objetos `Mesh`. |
+| 2 tipos de geometria | Foram utilizados 5 tipos de geometria. |
+| 4 cores diferentes | Há pelo menos 8 cores nos materiais. |
+| Coordenadas X, Y e Z diferentes | Os objetos usam diferentes valores em `position.set(x, y, z)`. |
+| 3 objetos com rotação | Mais de 3 objetos usam `rotation`. |
+| 3 objetos com escala | Mais de 3 objetos usam `scale`. |
+| Câmera adequada | A `PerspectiveCamera` está em `(9, 7, 12)` e aponta para o centro da composição. |
+| Scene, Camera e Renderer | O código cria `THREE.Scene`, `THREE.PerspectiveCamera` e `THREE.WebGLRenderer`. |
+| Geometry, Material e Mesh | Cada elemento visual combina uma geometria, um material e um `THREE.Mesh`. |
+| `scene.add()` | Todos os objetos e auxiliares são adicionados explicitamente à cena. |
+| `position`, `rotation` e `scale` | As três transformações aparecem de forma explícita no código. |
+| Funcionamento no navegador | O projeto usa Three.js por CDN e pode ser aberto com um servidor local. |
+| Sem animação | Não há `requestAnimationFrame`, relógio ou laço de animação. |
 
 ## Estrutura do projeto
 
 ```text
-teste-aula/
+projeto-threejs/
 ├── index.html
 └── README.md
 ```
 
-## Observações para a apresentação
+O JavaScript e o CSS permanecem dentro do arquivo `index.html`, deixando a entrega simples e compatível com a estrutura mínima solicitada.
 
-- Mostrar o painel alterando `position`, `rotation` e `scale`.
-- Explicar que o objeto central é um `Mesh` formado por geometria e material.
-- Mostrar os fragmentos como exemplo de múltiplos objetos em coordenadas diferentes.
-- Explicar que `animate()` atualiza os objetos e renderiza cada quadro.
-- Todos os integrantes devem estudar os comentários do `index.html` e compreender os recursos avançados usados.
+## Como executar
+
+Como o Three.js é carregado como módulo, abra o projeto por meio de um servidor local. Duas opções simples são:
+
+1. Abrir a pasta no Visual Studio Code e utilizar a extensão **Live Server** no arquivo `index.html`.
+2. Com Python instalado, executar `python -m http.server 8000` dentro da pasta e acessar `http://localhost:8000`.
+
+É necessário estar conectado à internet para carregar o Three.js pelo CDN.
+
+## Roteiro curto para apresentação
+
+1. **Cena:** “Criamos uma mini cidade 3D estática usando Three.js.”
+2. **Estrutura:** mostrar a criação de `Scene`, `PerspectiveCamera` e `WebGLRenderer`.
+3. **Objetos:** explicar que cada objeto combina `Geometry`, `Material` e `Mesh`.
+4. **Geometrias:** apontar caixa, esfera, cilindro, cone e plano na composição.
+5. **Transformações:** mostrar exemplos de `position`, `rotation` e `scale` no código.
+6. **Resultado:** destacar que há 17 objetos, mais de 4 cores e nenhum laço de animação.
